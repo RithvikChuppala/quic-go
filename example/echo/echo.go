@@ -9,8 +9,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
-	"log"
-	"math/big"
+	"math/big"	
 
 	"github.com/quic-go/quic-go"
 )
@@ -19,34 +18,78 @@ const addr = "localhost:4242"
 
 const message = "foobar"
 
+var streamMap =  make(map[quic.StreamID]quic.Stream)
+
 // We start a server echoing data on the first stream the client opens,
 // then connect with a client, send the message, and wait for its receipt.
 func main() {
-	go func() { log.Fatal(echoServer()) }()
+	echoServer()
+	// go func() { echoServer() }()
 
+	// time.Sleep(2 * time.Second) 
+
+	/*
 	err := clientMain()
 	if err != nil {
 		panic(err)
 	}
+	*/
 }
 
 // Start a server that echos all data on the first stream opened by the client
-func echoServer() error {
+func echoServer() {
+	// fmt.Println("server started")
 	listener, err := quic.ListenAddr(addr, generateTLSConfig(), nil)
-	if err != nil {
-		return err
-	}
-	conn, err := listener.Accept(context.Background())
-	if err != nil {
-		return err
-	}
-	stream, err := conn.AcceptStream(context.Background())
 	if err != nil {
 		panic(err)
 	}
-	// Echo through the loggingWriter
-	_, err = io.Copy(loggingWriter{stream}, stream)
-	return err
+	// fmt.Println("server listening to connections...")
+	conn, err := listener.Accept(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	// fmt.Println("server received client connection!")
+	counter := 0
+	for {
+		// fmt.Println("server waiting for client stream...")
+		stream, err := conn.AcceptStream(context.Background())
+		if err != nil {
+			panic(err)
+		}
+		// fmt.Println("server received data with streamid:", stream.StreamID())
+		go handleStream(stream)
+
+		// Echo through the loggingWriter
+		// _, err = io.Copy(loggingWriter{stream}, stream)
+		/*
+		streambytes, err := io.ReadAll(stream)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(fmt.Printf("Server: Got '%s'\n", string(streambytes)))
+		*/
+
+		counter++
+		// fmt.Println("num streams:", counter)
+	}
+}
+
+func handleStream(stream quic.Stream) (resp string, err error) {
+	streamMap[stream.StreamID()] = stream
+	// fmt.Println("Handling stream:", stream.StreamID(), stream)
+
+	b := []byte{0} // 1 byte buffer
+    var n int
+
+    for err == nil {
+        n, err = stream.Read(b)
+        if n == 0 {
+            continue
+        }
+        resp += string(b[0])
+    }
+	fmt.Printf("Server: Got '%s'\n", resp)
+	return resp, err
 }
 
 func clientMain() error {
@@ -59,11 +102,14 @@ func clientMain() error {
 		return err
 	}
 
+	fmt.Println("PADABAM")
+
 	stream, err := conn.OpenStreamSync(context.Background())
 	if err != nil {
 		return err
 	}
 
+	message := "DAMMAKU"
 	fmt.Printf("Client: Sending '%s'\n", message)
 	_, err = stream.Write([]byte(message))
 	if err != nil {
@@ -76,6 +122,26 @@ func clientMain() error {
 		return err
 	}
 	fmt.Printf("Client: Got '%s'\n", buf)
+
+
+	stream2, err := conn.OpenStreamSync(context.Background())
+	if err != nil {
+		return err
+	}
+
+	message2 := "PATTAYA KELAPPU"
+	fmt.Printf("Client2: Sending '%s'\n", message2)
+	_, err = stream2.Write([]byte(message2))
+	if err != nil {
+		return err
+	}
+
+	buf2 := make([]byte, len(message2))
+	_, err = io.ReadFull(stream2, buf2)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Client2: Got '%s'\n", buf2)
 
 	return nil
 }
