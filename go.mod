@@ -1,4 +1,4 @@
-module github.com/RithvikChuppala/quic-go
+module github.com/quic-go/quic-go
 
 go 1.20
 
@@ -8,7 +8,6 @@ require (
 	github.com/onsi/gomega v1.27.6
 	github.com/quic-go/qpack v0.4.0
 	github.com/quic-go/qtls-go1-20 v0.4.1
-	github.com/quic-go/quic-go v0.40.0
 	go.uber.org/mock v0.3.0
 	golang.org/x/crypto v0.4.0
 	golang.org/x/exp v0.0.0-20221205204356-47842c84f3db
@@ -25,5 +24,6 @@ require (
 	golang.org/x/mod v0.11.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/tools v0.9.1 // indirect
+	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
