@@ -210,6 +210,8 @@ type connection struct {
 	logID  string
 	tracer *logging.ConnectionTracer
 	logger utils.Logger
+
+	name string `default:"geek"` 
 }
 
 var (
@@ -2253,7 +2255,6 @@ func (s *connection) AcceptUniStream(ctx context.Context) (ReceiveStream, error)
 
 // OpenStream opens a stream
 func (s *connection) OpenStream() (Stream, error) {
-	fmt.Println("ILLAYAYELLEI")
 	return s.streamsMap.OpenStream()
 }
 
