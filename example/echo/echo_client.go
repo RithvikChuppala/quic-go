@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/quic-go/quic-go"
+	"quic-go/quic-go"
 )
 
 const addr = "localhost:4242"
@@ -50,7 +50,7 @@ func clientMain() error {
 
 	// time.Sleep(1*time.Second)
 
-	message := "DAMMAKU "
+	message := "MESSAGE1 "
 	_, err = stream.Write([]byte(message))
 	if err != nil {
 		return err
@@ -79,17 +79,29 @@ func clientMain() error {
 
 	// time.Sleep(1 * time.Second)
 
-	message2 := "PATTAYA " 
+	message2 := "MESSAGE2 " 
 	_, err = stream2.Write([]byte(message2))
 	if err != nil {
 		return err
 	}
 	// fmt.Printf("Client: Sending '%s' on stream id: %d \n", message2, stream2.StreamID())
+
+
+	stream3, err := conn.OpenStream()
+	if err != nil {
+		return err
+	}
+	message3 := "MESSAGE3 "
+	_, err = stream3.Write([]byte(message3))
+	if err != nil {
+		return err
+	}
+
 
 
 	
 
-	message = "DAMMAKU "
+	message = "MESSAGE1 "
 	_, err = stream.Write([]byte(message))
 	if err != nil {
 		return err
@@ -97,14 +109,20 @@ func clientMain() error {
 	// fmt.Printf("Client: Sending '%s' on stream id: %d \n", message, stream.StreamID())
 
 
-	message2 = "PATTAYA "
+	message2 = "MESSAGE2 "
 	_, err = stream2.Write([]byte(message2))
 	if err != nil {
 		return err
 	}
 	// fmt.Printf("Client: Sending '%s' on stream id: %d \n", message2, stream2.StreamID())
 
-	message = "DAMMAKU "
+	message3 = "MESSAGE3 "
+	_, err = stream3.Write([]byte(message3))
+	if err != nil {
+		return err
+	}
+
+	message = "MESSAGE1 "
 	_, err = stream.Write([]byte(message))
 	if err != nil {
 		return err
@@ -112,14 +130,20 @@ func clientMain() error {
 	// fmt.Printf("Client: Sending '%s' on stream id: %d \n", message, stream.StreamID())
 
 
-	message2 = "PATTAYA "
+	message2 = "MESSAGE2 "
 	_, err = stream2.Write([]byte(message2))
 	if err != nil {
 		return err
 	}
 	// fmt.Printf("Client: Sending '%s' on stream id: %d \n", message2, stream2.StreamID())
 
-	message = "DAMMAKU "
+	message3 = "MESSAGE3 "
+	_, err = stream3.Write([]byte(message3))
+	if err != nil {
+		return err
+	}
+
+	message = "MESSAGE1 "
 	_, err = stream.Write([]byte(message))
 	if err != nil {
 		return err
@@ -127,17 +151,21 @@ func clientMain() error {
 	// fmt.Printf("Client: Sending '%s' on stream id: %d \n", message, stream.StreamID())
 
 
-	message2 = "PATTAYA "
+	message2 = "MESSAGE2 "
 	_, err = stream2.Write([]byte(message2))
 	if err != nil {
 		return err
 	}
 	// fmt.Printf("Client: Sending '%s' on stream id: %d \n", message2, stream2.StreamID())
 
+	message3 = "MESSAGE3 "
+	_, err = stream3.Write([]byte(message3))
+	if err != nil {
+		return err
+	}
 
 
-
-	message = "DAMMAKU"
+	message = "MESSAGE1"
 	_, err = stream.Write([]byte(message))
 	if err != nil {
 		return err
@@ -146,9 +174,23 @@ func clientMain() error {
 
 	stream.Close()
 
+
+
+
+	stream4, err := conn.OpenStream()
+	if err != nil {
+		return err
+	}
+	message4 := "MESSAGE4 "
+	_, err = stream4.Write([]byte(message4))
+	if err != nil {
+		return err
+	}
+
+
 	// time.Sleep(1 * time.Second)
 
-	message2 = "PATTAYA"
+	message2 = "MESSAGE2"
 	_, err = stream2.Write([]byte(message2))
 	if err != nil {
 		return err
@@ -156,6 +198,45 @@ func clientMain() error {
 	// fmt.Printf("Client: Sending '%s' on stream id: %d \n", message2, stream2.StreamID())
 
 	stream2.Close()
+
+	
+	message3 = "MESSAGE3"
+	_, err = stream3.Write([]byte(message3))
+	if err != nil {
+		return err
+	}
+
+	stream3.Close()
+	
+
+	message4 = "MESSAGE4 "
+	_, err = stream4.Write([]byte(message4))
+	if err != nil {
+		return err
+	}
+
+	message4 = "MESSAGE4 "
+	_, err = stream4.Write([]byte(message4))
+	if err != nil {
+		return err
+	}
+
+	message4 = "MESSAGE4 "
+	_, err = stream4.Write([]byte(message4))
+	if err != nil {
+		return err
+	}
+
+	message4 = "MESSAGE4"
+	_, err = stream4.Write([]byte(message4))
+	if err != nil {
+		return err
+	}
+
+
+	time.Sleep(1 * time.Second)
+
+	stream4.Close()
 
 	time.Sleep(1 * time.Second)
 

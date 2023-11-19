@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"	
+	"sync"
 
 	"github.com/quic-go/quic-go"
 )
@@ -19,6 +20,7 @@ const addr = "localhost:4242"
 const message = "foobar"
 
 var streamMap =  make(map[quic.StreamID]quic.Stream)
+var mapMutex = &sync.RWMutex{}
 
 // We start a server echoing data on the first stream the client opens,
 // then connect with a client, send the message, and wait for its receipt.
@@ -75,7 +77,9 @@ func echoServer() {
 }
 
 func handleStream(stream quic.Stream) (resp string, err error) {
+	mapMutex.Lock()
 	streamMap[stream.StreamID()] = stream
+	mapMutex.Unlock()
 	// fmt.Println("Handling stream:", stream.StreamID(), stream)
 
 	b := []byte{0} // 1 byte buffer
