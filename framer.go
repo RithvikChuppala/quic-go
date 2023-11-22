@@ -33,14 +33,22 @@ type framerI struct {
 
 	controlFrameMutex sync.Mutex
 	controlFrames     []wire.Frame
+
+	config         *Config
+	streamMapPrio map[protocol.StreamID]int
+	auxPriorSlice []int
 }
 
 var _ framer = &framerI{}
 
-func newFramer(streamGetter streamGetter) framer {
+func newFramer(
+		streamGetter streamGetter,
+		config *Config) framer {
 	return &framerI{
 		streamGetter:  streamGetter,
 		activeStreams: make(map[protocol.StreamID]struct{}),
+		config: 	   config,
+		streamMapPrio: make(map[protocol.StreamID]int),
 	}
 }
 
@@ -85,6 +93,40 @@ func (f *framerI) AddActiveStream(id protocol.StreamID) {
 	if _, ok := f.activeStreams[id]; !ok {
 		f.streamQueue.PushBack(id)
 		f.activeStreams[id] = struct{}{}
+
+		switch f.config.TypePrio {
+			case "abs"://The stream queue is ordered by StreamPrior priorities slice.
+				lenQ := f.streamQueue.Len()
+				prior := 1
+				//To assign priority to each slice in a map
+				if v, ok := f.streamMapPrio[id]; ok {
+					prior=v
+				}else{
+					fmt.Println("Else: \n",f.streamQueue, lenQ, prior,f.config.StreamPrio)
+					if len(f.config.StreamPrio) > 0 {
+						prior = f.config.StreamPrio[0]
+						f.config.StreamPrio = f.config.StreamPrio[1:] //Delete the used priority for the next stream
+					}
+					f.streamMapPrio[id] = prior ///To assign priority to each slice in a map
+				}
+				f.auxPriorSlice = append(f.auxPriorSlice,prior)
+				//Absolute priorization: the stream queue is ordered regarding the priorities of the stream (StreamPrio slice) which is also ordered
+				posIni := lenQ-1
+				newPrior := f.auxPriorSlice[posIni]
+				var correctPos int //Correct position of the stream/prior regarding the prior
+				for i := lenQ-1; i >= 0 ; i--{
+					if  newPrior >= f.auxPriorSlice[i] {
+						correctPos=i
+					}
+				}
+				//To insert the stream ID and priority in the correct position
+				auxSlice := append(f.auxPriorSlice[:correctPos], append([]int{newPrior}, f.auxPriorSlice[correctPos:posIni]...)...)
+				copy(f.auxPriorSlice, auxSlice)
+				f.streamQueue = append(f.streamQueue[:correctPos], append([]protocol.StreamID{id}, f.streamQueue[correctPos:posIni]...)...)
+			case "rr": // stream ID has already been added
+			default:
+		}
+
 	}
 	f.mutex.Unlock()
 }

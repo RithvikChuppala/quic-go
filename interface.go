@@ -325,6 +325,11 @@ type Config struct {
 	// Enable QUIC datagram support (RFC 9221).
 	EnableDatagrams bool
 	Tracer          func(context.Context, logging.Perspective, ConnectionID) *logging.ConnectionTracer
+
+	//SCHEDULER: StreamPrio defines the weight given to each stream.
+	StreamPrio []int
+	//SCHEDULER: TypePrio defines the type of the priority scheduler--> abs: absolute priorities, rr: round robin
+	TypePrio string
 }
 
 type ClientHelloInfo struct {
