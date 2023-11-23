@@ -3,10 +3,11 @@ package quic
 import (
 	"errors"
 	"sync"
+	"fmt"
 
 	"github.com/quic-go/quic-go/internal/ackhandler"
 	"github.com/quic-go/quic-go/internal/protocol"
-	"github.com/quic-go/quic-go/internal/utils/ringbuffer"
+	// "github.com/quic-go/quic-go/internal/utils/ringbuffer"
 	"github.com/quic-go/quic-go/internal/wire"
 	"github.com/quic-go/quic-go/quicvarint"
 )
@@ -29,7 +30,8 @@ type framerI struct {
 	streamGetter streamGetter
 
 	activeStreams map[protocol.StreamID]struct{}
-	streamQueue   ringbuffer.RingBuffer[protocol.StreamID]
+	// streamQueue   ringbuffer.RingBuffer[protocol.StreamID]
+	streamQueue []protocol.StreamID
 
 	controlFrameMutex sync.Mutex
 	controlFrames     []wire.Frame
@@ -54,7 +56,8 @@ func newFramer(
 
 func (f *framerI) HasData() bool {
 	f.mutex.Lock()
-	hasData := !f.streamQueue.Empty()
+	// hasData := !f.streamQueue.Empty()
+	hasData := len(f.streamQueue) > 0
 	f.mutex.Unlock()
 	if hasData {
 		return true
@@ -91,12 +94,14 @@ func (f *framerI) AppendControlFrames(frames []ackhandler.Frame, maxLen protocol
 func (f *framerI) AddActiveStream(id protocol.StreamID) {
 	f.mutex.Lock()
 	if _, ok := f.activeStreams[id]; !ok {
-		f.streamQueue.PushBack(id)
+		// f.streamQueue.PushBack(id)
+		f.streamQueue = append(f.streamQueue, id)
 		f.activeStreams[id] = struct{}{}
 
 		switch f.config.TypePrio {
 			case "abs"://The stream queue is ordered by StreamPrior priorities slice.
-				lenQ := f.streamQueue.Len()
+				// lenQ := f.streamQueue.Len()
+				lenQ := len(f.streamQueue)
 				prior := 1
 				//To assign priority to each slice in a map
 				if v, ok := f.streamMapPrio[id]; ok {
@@ -122,6 +127,7 @@ func (f *framerI) AddActiveStream(id protocol.StreamID) {
 				//To insert the stream ID and priority in the correct position
 				auxSlice := append(f.auxPriorSlice[:correctPos], append([]int{newPrior}, f.auxPriorSlice[correctPos:posIni]...)...)
 				copy(f.auxPriorSlice, auxSlice)
+				// f.streamQueue.MoveInsert(id, correctPos, posIni)
 				f.streamQueue = append(f.streamQueue[:correctPos], append([]protocol.StreamID{id}, f.streamQueue[correctPos:posIni]...)...)
 			case "rr": // stream ID has already been added
 			default:
@@ -136,18 +142,26 @@ func (f *framerI) AppendStreamFrames(frames []ackhandler.StreamFrame, maxLen pro
 	var length protocol.ByteCount
 	f.mutex.Lock()
 	// pop STREAM frames, until less than MinStreamFrameSize bytes are left in the packet
-	numActiveStreams := f.streamQueue.Len()
+	// numActiveStreams := f.streamQueue.Len()
+	numActiveStreams := len(f.streamQueue)
 	for i := 0; i < numActiveStreams; i++ {
-		if protocol.MinStreamFrameSize+length > maxLen {
+		if protocol.MinStreamFrameSize+length > maxLen || i >= len(f.streamQueue) {
 			break
 		}
-		id := f.streamQueue.PopFront()
+		// id := f.streamQueue.PopFront()
+		id := f.streamQueue[0]
+		f.streamQueue = f.streamQueue[1:]
 		// This should never return an error. Better check it anyway.
 		// The stream will only be in the streamQueue, if it enqueued itself there.
 		str, err := f.streamGetter.GetOrOpenSendStream(id)
 		// The stream can be nil if it completed after it said it had data.
 		if str == nil || err != nil {
 			delete(f.activeStreams, id)
+
+			if f.config.TypePrio == "abs" {
+				f.config.StreamPrio = f.config.StreamPrio[1:]
+			}
+
 			continue
 		}
 		remainingLen := maxLen - length
@@ -156,11 +170,23 @@ func (f *framerI) AppendStreamFrames(frames []ackhandler.StreamFrame, maxLen pro
 		// the STREAM frame (which will always have the DataLen set).
 		remainingLen += quicvarint.Len(uint64(remainingLen))
 		frame, ok, hasMoreData := str.popStreamFrame(remainingLen, v)
-		if hasMoreData { // put the stream back in the queue (at the end)
-			f.streamQueue.PushBack(id)
-		} else { // no more data to send. Stream is not active
-			delete(f.activeStreams, id)
+
+		if f.config.TypePrio == "abs" {
+			if hasMoreData { // put the stream front in the queue (at the beginning)
+				f.streamQueue = append([]protocol.StreamID{id},f.streamQueue...)
+			} else { // no more data to send. Stream is not active anymore
+				delete(f.activeStreams, id)
+				//Delete the priority of the stream in order not to confuse priorities with the arrival of new streams
+				f.auxPriorSlice=f.auxPriorSlice[1:]
+			}
+		} else{ // RR
+			if hasMoreData { // put the stream back in the queue (at the end)
+				f.streamQueue = append(f.streamQueue, id)
+			} else { // no more data to send. Stream is not active anymore
+				delete(f.activeStreams, id)
+			}
 		}
+		
 		// The frame can be "nil"
 		// * if the receiveStream was canceled after it said it had data
 		// * the remaining size doesn't allow us to add another STREAM frame
@@ -185,7 +211,8 @@ func (f *framerI) Handle0RTTRejection() error {
 	defer f.mutex.Unlock()
 
 	f.controlFrameMutex.Lock()
-	f.streamQueue.Clear()
+	// f.streamQueue.Clear()
+	f.streamQueue = f.streamQueue[:0]
 	for id := range f.activeStreams {
 		delete(f.activeStreams, id)
 	}

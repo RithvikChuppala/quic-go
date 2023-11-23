@@ -13,6 +13,7 @@ var _ = Describe("RingBuffer", func() {
 		r.PushBack(1)
 		r.PushBack(2)
 		r.PushBack(3)
+		Expect(r.Len()).To(Equal(3))
 		Expect(r.PopFront()).To(Equal(1))
 		Expect(r.PopFront()).To(Equal(2))
 		r.PushBack(4)

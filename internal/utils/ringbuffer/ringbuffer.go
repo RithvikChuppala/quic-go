@@ -45,6 +45,22 @@ func (r *RingBuffer[T]) PushBack(t T) {
 	}
 }
 
+/*
+func (r *RingBuffer[T]) PushFront(t T) {
+	if r.full || len(r.ring) == 0 {
+		r.grow()
+	}
+	r.ring = append([]T{t}, r.ring...)
+	r.tailPos++
+	if r.tailPos == len(r.ring) {
+		r.tailPos = 0
+	}
+	if r.tailPos == r.headPos {
+		r.full = true
+	}
+}
+*/
+
 // PopFront returns the next element.
 // It must not be called when the buffer is empty, that means that
 // callers might need to check if there are elements in the buffer first.
