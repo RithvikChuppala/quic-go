@@ -107,11 +107,11 @@ func (f *framerI) AddActiveStream(id protocol.StreamID) {
 				if v, ok := f.streamMapPrio[id]; ok {
 					prior=v
 				}else{
-					fmt.Println("Else: \n",f.streamQueue, lenQ, prior,f.config.StreamPrio)
 					if len(f.config.StreamPrio) > 0 {
 						prior = f.config.StreamPrio[0]
 						f.config.StreamPrio = f.config.StreamPrio[1:] //Delete the used priority for the next stream
 					}
+					// fmt.Println("Else: \n",f.streamQueue, lenQ, prior,f.config.StreamPrio)
 					f.streamMapPrio[id] = prior ///To assign priority to each slice in a map
 				}
 				f.auxPriorSlice = append(f.auxPriorSlice,prior)
@@ -122,6 +122,7 @@ func (f *framerI) AddActiveStream(id protocol.StreamID) {
 				for i := lenQ-1; i >= 0 ; i--{
 					if  newPrior >= f.auxPriorSlice[i] {
 						correctPos=i
+						fmt.Println(id, correctPos, prior)
 					}
 				}
 				//To insert the stream ID and priority in the correct position

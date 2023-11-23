@@ -15,6 +15,10 @@ func (c *Config) Clone() *Config {
 	return &copy
 }
 
+func (c *Config) AddStreamPrio(prio int) {
+	c.StreamPrio = append(c.StreamPrio, prio)
+}
+
 func (c *Config) handshakeTimeout() time.Duration {
 	return 2 * c.HandshakeIdleTimeout
 }
@@ -126,7 +130,7 @@ func populateConfig(config *Config) *Config {
 		Allow0RTT:                      config.Allow0RTT,
 		Tracer:                         config.Tracer,
 
-		StreamPrio:                      config.StreamPrio,
-		TypePrio: 						  config.TypePrio,
+		StreamPrio:                     config.StreamPrio,
+		TypePrio: 						config.TypePrio,
 	}
 }
