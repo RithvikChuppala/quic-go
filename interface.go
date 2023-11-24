@@ -328,6 +328,10 @@ type Config struct {
 
 	//SCHEDULER: StreamPrio defines the weight given to each stream.
 	StreamPrio []int
+
+	//SCHEDULER: Deadline defines the deadline given to each stream.
+	StreamDeadline []int64
+
 	//SCHEDULER: TypePrio defines the type of the priority scheduler--> abs: absolute priorities, rr: round robin
 	TypePrio string
 }

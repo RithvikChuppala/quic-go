@@ -19,6 +19,10 @@ func (c *Config) AddStreamPrio(prio int) {
 	c.StreamPrio = append(c.StreamPrio, prio)
 }
 
+func (c *Config) AddStreamDeadline(deadline int64) {
+	c.StreamDeadline = append(c.StreamDeadline, deadline)
+}
+
 func (c *Config) handshakeTimeout() time.Duration {
 	return 2 * c.HandshakeIdleTimeout
 }
