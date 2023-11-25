@@ -3,7 +3,6 @@ package quic
 import (
 	"errors"
 	"sync"
-	"fmt"
 
 	"github.com/quic-go/quic-go/internal/ackhandler"
 	"github.com/quic-go/quic-go/internal/protocol"
