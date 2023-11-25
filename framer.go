@@ -122,7 +122,6 @@ func (f *framerI) AddActiveStream(id protocol.StreamID) {
 				for i := lenQ-1; i >= 0 ; i--{
 					if  newPrior >= f.auxPriorSlice[i] {
 						correctPos=i
-						fmt.Println(id, correctPos, prior)
 					}
 				}
 				//To insert the stream ID and priority in the correct position
