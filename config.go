@@ -15,12 +15,12 @@ func (c *Config) Clone() *Config {
 	return &copy
 }
 
-func (c *Config) AddStreamPrio(prio int) {
-	c.StreamPrio = append(c.StreamPrio, prio)
+func (c *Config) AddStreamPrio(prio int64) {
+	*c.StreamPrio = append(*c.StreamPrio, prio)
 }
 
 func (c *Config) AddStreamDeadline(deadline int64) {
-	c.StreamDeadline = append(c.StreamDeadline, deadline)
+	*c.StreamDeadline = append(*c.StreamDeadline, deadline)
 }
 
 func (c *Config) handshakeTimeout() time.Duration {

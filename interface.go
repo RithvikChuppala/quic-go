@@ -327,12 +327,12 @@ type Config struct {
 	Tracer          func(context.Context, logging.Perspective, ConnectionID) *logging.ConnectionTracer
 
 	//SCHEDULER: StreamPrio defines the weight given to each stream.
-	StreamPrio []int
+	StreamPrio *[]int64
 
 	//SCHEDULER: Deadline defines the deadline given to each stream.
-	StreamDeadline []int64
+	StreamDeadline *[]int64
 
-	//SCHEDULER: TypePrio defines the type of the priority scheduler--> abs: absolute priorities, rr: round robin
+	//SCHEDULER: TypePrio defines the type of the priority scheduler--> abs: absolute priorities, rr: round robin, edf: earliest deadline first
 	TypePrio string
 }
 

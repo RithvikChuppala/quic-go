@@ -37,8 +37,8 @@ type framerI struct {
 	controlFrames     []wire.Frame
 
 	config         *Config
-	streamMapPrio map[protocol.StreamID]int
-	auxPriorSlice []int
+	streamMapPrio map[protocol.StreamID]int64
+	auxPriorSlice []int64
 
 	streamMapDeadline map[protocol.StreamID]int64
 	auxDeadlineSlice []int64
@@ -53,7 +53,7 @@ func newFramer(
 		streamGetter:  streamGetter,
 		activeStreams: make(map[protocol.StreamID]struct{}),
 		config: 	   config,
-		streamMapPrio: make(map[protocol.StreamID]int),
+		streamMapPrio: make(map[protocol.StreamID]int64),
 		streamMapDeadline: make(map[protocol.StreamID]int64),
 	}
 }
@@ -97,6 +97,7 @@ func (f *framerI) AppendControlFrames(frames []ackhandler.Frame, maxLen protocol
 
 func (f *framerI) AddActiveStream(id protocol.StreamID) {
 	f.mutex.Lock()
+	defer f.mutex.Unlock()
 	if _, ok := f.activeStreams[id]; !ok {
 		switch f.config.TypePrio {
 			case "abs"://The stream queue is ordered by StreamPrior priorities slice.
@@ -106,14 +107,14 @@ func (f *framerI) AddActiveStream(id protocol.StreamID) {
 				
 				// lenQ := f.streamQueue.Len()
 				lenQ := len(f.streamQueue)
-				prior := 1
+				var prior int64 = 1
 				//To assign priority to each slice in a map
 				if v, ok := f.streamMapPrio[id]; ok {
 					prior=v
 				}else{
-					if len(f.config.StreamPrio) > 0 {
-						prior = f.config.StreamPrio[0]
-						f.config.StreamPrio = f.config.StreamPrio[1:] //Delete the used priority for the next stream
+					if len(*f.config.StreamPrio) > 0 {
+						prior = (*f.config.StreamPrio)[0]
+						*f.config.StreamPrio = (*f.config.StreamPrio)[1:] //Delete the used priority for the next stream
 					}
 					// fmt.Println("Else: \n",f.streamQueue, lenQ, prior,f.config.StreamPrio)
 					f.streamMapPrio[id] = prior ///To assign priority to each slice in a map
@@ -129,12 +130,11 @@ func (f *framerI) AddActiveStream(id protocol.StreamID) {
 					}
 				}
 				//To insert the stream ID and priority in the correct position
-				auxSlice := append(f.auxPriorSlice[:correctPos], append([]int{newPrior}, f.auxPriorSlice[correctPos:posIni]...)...)
+				auxSlice := append(f.auxPriorSlice[:correctPos], append([]int64{newPrior}, f.auxPriorSlice[correctPos:posIni]...)...)
 				copy(f.auxPriorSlice, auxSlice)
 				// f.streamQueue.MoveInsert(id, correctPos, posIni)
 				f.streamQueue = append(f.streamQueue[:correctPos], append([]protocol.StreamID{id}, f.streamQueue[correctPos:posIni]...)...)
 			case "edf":
-				lenQ := len(f.streamQueue)
 				var deadline int64 = -1
 				//To assign deadline to each slice in a map
 				if v, ok := f.streamMapDeadline[id]; ok {
@@ -144,9 +144,9 @@ func (f *framerI) AddActiveStream(id protocol.StreamID) {
 						delete(f.streamMapDeadline, id)
 					}
 				} else {
-					if len(f.config.StreamDeadline) > 0 {
-						currDeadline := f.config.StreamDeadline[0]
-						f.config.StreamDeadline = f.config.StreamDeadline[1:] //Delete the used deadline for the next stream
+					if len(*f.config.StreamDeadline) > 0 {
+						currDeadline := (*f.config.StreamDeadline)[0]
+						*f.config.StreamDeadline = (*f.config.StreamDeadline)[1:] //Delete the used deadline for the next stream
 
 						if currDeadline > time.Now().UnixMilli() {
 							deadline = currDeadline
@@ -154,6 +154,7 @@ func (f *framerI) AddActiveStream(id protocol.StreamID) {
 						}
 					}
 				}
+
 				if deadline == -1 {
 					return
 				}
@@ -163,6 +164,7 @@ func (f *framerI) AddActiveStream(id protocol.StreamID) {
 				f.activeStreams[id] = struct{}{}
 				f.auxDeadlineSlice = append(f.auxDeadlineSlice, deadline)
 				//Absolute deadline: the stream queue is ordered regarding the deadline of the stream (StreamDeadline slice) which is also ordered
+				lenQ := len(f.streamQueue)
 				posIni := lenQ-1
 				newDeadline := f.auxDeadlineSlice[posIni]
 				var correctPos int //Correct position of the stream/deadline regarding the deadline
@@ -187,7 +189,6 @@ func (f *framerI) AddActiveStream(id protocol.StreamID) {
 		}
 
 	}
-	f.mutex.Unlock()
 }
 
 func (f *framerI) AppendStreamFrames(frames []ackhandler.StreamFrame, maxLen protocol.ByteCount, v protocol.VersionNumber) ([]ackhandler.StreamFrame, protocol.ByteCount) {
@@ -212,11 +213,11 @@ func (f *framerI) AppendStreamFrames(frames []ackhandler.StreamFrame, maxLen pro
 			delete(f.activeStreams, id)
 
 			if f.config.TypePrio == "abs" {
-				f.config.StreamPrio = f.config.StreamPrio[1:]
+				*f.config.StreamPrio = (*f.config.StreamPrio)[1:]
 			}
 
 			if f.config.TypePrio == "edf" {
-				f.config.StreamDeadline = f.config.StreamDeadline[1:]
+				*f.config.StreamDeadline = (*f.config.StreamDeadline)[1:]
 			}
 
 			continue
@@ -237,8 +238,8 @@ func (f *framerI) AppendStreamFrames(frames []ackhandler.StreamFrame, maxLen pro
 				f.auxPriorSlice=f.auxPriorSlice[1:]
 			}
 		} else if f.config.TypePrio == "edf" {
-			currDeadline := f.auxDeadlineSlice[0]
-			if hasMoreData && currDeadline > time.Now().UnixMilli() {
+			// currDeadline := f.auxDeadlineSlice[0]
+			if hasMoreData { // && currDeadline > time.Now().UnixMilli() {
 				f.streamQueue = append([]protocol.StreamID{id}, f.streamQueue...)
 			} else {
 				delete(f.activeStreams, id)
