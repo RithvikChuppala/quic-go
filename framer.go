@@ -172,7 +172,7 @@ func (f *framerI) AddActiveStream(id protocol.StreamID) {
 					}
 				}
 				//To insert the stream ID and deadline in the correct position
-				auxSlice := append(f.auxDeadlineSlice[:correctPos], append([]int{newDeadline}, f.auxDeadlineSlice[correctPos:posIni]...)...)
+				auxSlice := append(f.auxDeadlineSlice[:correctPos], append([]int64{newDeadline}, f.auxDeadlineSlice[correctPos:posIni]...)...)
 				copy(f.auxDeadlineSlice, auxSlice)
 				// f.streamQueue.MoveInsert(id, correctPos, posIni)
 				f.streamQueue = append(f.streamQueue[:correctPos], append([]protocol.StreamID{id}, f.streamQueue[correctPos:posIni]...)...)
@@ -215,6 +215,10 @@ func (f *framerI) AppendStreamFrames(frames []ackhandler.StreamFrame, maxLen pro
 				f.config.StreamPrio = f.config.StreamPrio[1:]
 			}
 
+			if f.config.TypePrio == "edf" {
+				f.config.StreamDeadline = f.config.StreamDeadline[1:]
+			}
+
 			continue
 		}
 		remainingLen := maxLen - length
@@ -231,6 +235,14 @@ func (f *framerI) AppendStreamFrames(frames []ackhandler.StreamFrame, maxLen pro
 				delete(f.activeStreams, id)
 				//Delete the priority of the stream in order not to confuse priorities with the arrival of new streams
 				f.auxPriorSlice=f.auxPriorSlice[1:]
+			}
+		} else if f.config.TypePrio == "edf" {
+			currDeadline := f.auxDeadlineSlice[0]
+			if hasMoreData && currDeadline > time.Now().UnixMilli() {
+				f.streamQueue = append([]protocol.StreamID{id}, f.streamQueue...)
+			} else {
+				delete(f.activeStreams, id)
+				f.auxDeadlineSlice = f.auxDeadlineSlice[1:]
 			}
 		} else{ // RR
 			if hasMoreData { // put the stream back in the queue (at the end)
