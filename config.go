@@ -135,6 +135,7 @@ func populateConfig(config *Config) *Config {
 		Tracer:                         config.Tracer,
 
 		StreamPrio:                     config.StreamPrio,
+		StreamDeadline:                 config.StreamDeadline,
 		TypePrio: 						config.TypePrio,
 	}
 }

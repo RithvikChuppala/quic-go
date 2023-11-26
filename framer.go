@@ -3,6 +3,7 @@ package quic
 import (
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/quic-go/quic-go/internal/ackhandler"
 	"github.com/quic-go/quic-go/internal/protocol"
@@ -38,6 +39,9 @@ type framerI struct {
 	config         *Config
 	streamMapPrio map[protocol.StreamID]int
 	auxPriorSlice []int
+
+	streamMapDeadline map[protocol.StreamID]int64
+	auxDeadlineSlice []int64
 }
 
 var _ framer = &framerI{}
@@ -50,6 +54,7 @@ func newFramer(
 		activeStreams: make(map[protocol.StreamID]struct{}),
 		config: 	   config,
 		streamMapPrio: make(map[protocol.StreamID]int),
+		streamMapDeadline: make(map[protocol.StreamID]int64),
 	}
 }
 
@@ -93,12 +98,12 @@ func (f *framerI) AppendControlFrames(frames []ackhandler.Frame, maxLen protocol
 func (f *framerI) AddActiveStream(id protocol.StreamID) {
 	f.mutex.Lock()
 	if _, ok := f.activeStreams[id]; !ok {
-		// f.streamQueue.PushBack(id)
-		f.streamQueue = append(f.streamQueue, id)
-		f.activeStreams[id] = struct{}{}
-
 		switch f.config.TypePrio {
 			case "abs"://The stream queue is ordered by StreamPrior priorities slice.
+				// f.streamQueue.PushBack(id)
+				f.streamQueue = append(f.streamQueue, id)
+				f.activeStreams[id] = struct{}{}
+				
 				// lenQ := f.streamQueue.Len()
 				lenQ := len(f.streamQueue)
 				prior := 1
@@ -128,8 +133,57 @@ func (f *framerI) AddActiveStream(id protocol.StreamID) {
 				copy(f.auxPriorSlice, auxSlice)
 				// f.streamQueue.MoveInsert(id, correctPos, posIni)
 				f.streamQueue = append(f.streamQueue[:correctPos], append([]protocol.StreamID{id}, f.streamQueue[correctPos:posIni]...)...)
+			case "edf":
+				lenQ := len(f.streamQueue)
+				var deadline int64 = -1
+				//To assign deadline to each slice in a map
+				if v, ok := f.streamMapDeadline[id]; ok {
+					if v > time.Now().UnixMilli() {
+						deadline=v
+					} else {
+						delete(f.streamMapDeadline, id)
+					}
+				} else {
+					if len(f.config.StreamDeadline) > 0 {
+						currDeadline := f.config.StreamDeadline[0]
+						f.config.StreamDeadline = f.config.StreamDeadline[1:] //Delete the used deadline for the next stream
+
+						if currDeadline > time.Now().UnixMilli() {
+							deadline = currDeadline
+							f.streamMapDeadline[id] = deadline 
+						}
+					}
+				}
+				if deadline == -1 {
+					return
+				}
+
+				// f.streamQueue.PushBack(id)
+				f.streamQueue = append(f.streamQueue, id)
+				f.activeStreams[id] = struct{}{}
+				f.auxDeadlineSlice = append(f.auxDeadlineSlice, deadline)
+				//Absolute deadline: the stream queue is ordered regarding the deadline of the stream (StreamDeadline slice) which is also ordered
+				posIni := lenQ-1
+				newDeadline := f.auxDeadlineSlice[posIni]
+				var correctPos int //Correct position of the stream/deadline regarding the deadline
+				for i := lenQ-1; i >= 0 ; i--{
+					if  newDeadline <= f.auxDeadlineSlice[i] {
+						correctPos=i
+					}
+				}
+				//To insert the stream ID and deadline in the correct position
+				auxSlice := append(f.auxDeadlineSlice[:correctPos], append([]int{newDeadline}, f.auxDeadlineSlice[correctPos:posIni]...)...)
+				copy(f.auxDeadlineSlice, auxSlice)
+				// f.streamQueue.MoveInsert(id, correctPos, posIni)
+				f.streamQueue = append(f.streamQueue[:correctPos], append([]protocol.StreamID{id}, f.streamQueue[correctPos:posIni]...)...)
 			case "rr": // stream ID has already been added
+				// f.streamQueue.PushBack(id)
+				f.streamQueue = append(f.streamQueue, id)
+				f.activeStreams[id] = struct{}{}
 			default:
+				// f.streamQueue.PushBack(id)
+				f.streamQueue = append(f.streamQueue, id)
+				f.activeStreams[id] = struct{}{}
 		}
 
 	}
