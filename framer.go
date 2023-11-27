@@ -248,7 +248,7 @@ func (f *framerI) AppendStreamFrames(frames []ackhandler.StreamFrame, maxLen pro
 				delete(f.activeStreams, id)
 				f.auxDeadlineSlice = f.auxDeadlineSlice[1:]
 			}
-		} else if f.config.TypePrio = "fcfs" {
+		} else if f.config.TypePrio == "fcfs" {
 			if hasMoreData {
 				f.streamQueue = append([]protocol.StreamID{id}, f.streamQueue...)
 			} else {
