@@ -241,8 +241,8 @@ func (f *framerI) AppendStreamFrames(frames []ackhandler.StreamFrame, maxLen pro
 				f.auxPriorSlice=f.auxPriorSlice[1:]
 			}
 		} else if f.config.TypePrio == "edf" {
-			// currDeadline := f.auxDeadlineSlice[0]
-			if hasMoreData { // && currDeadline > time.Now().UnixMilli() {
+			currDeadline := f.auxDeadlineSlice[0]
+			if hasMoreData && currDeadline > time.Now().UnixMilli() {
 				f.streamQueue = append([]protocol.StreamID{id}, f.streamQueue...)
 			} else {
 				delete(f.activeStreams, id)
