@@ -178,6 +178,9 @@ func (f *framerI) AddActiveStream(id protocol.StreamID) {
 				copy(f.auxDeadlineSlice, auxSlice)
 				// f.streamQueue.MoveInsert(id, correctPos, posIni)
 				f.streamQueue = append(f.streamQueue[:correctPos], append([]protocol.StreamID{id}, f.streamQueue[correctPos:posIni]...)...)
+			case "fcfs": // First come first serve
+				f.streamQueue = append(f.streamQueue, id)
+				f.activeStreams[id] = struct{}{}
 			case "rr": // stream ID has already been added
 				// f.streamQueue.PushBack(id)
 				f.streamQueue = append(f.streamQueue, id)
@@ -244,6 +247,12 @@ func (f *framerI) AppendStreamFrames(frames []ackhandler.StreamFrame, maxLen pro
 			} else {
 				delete(f.activeStreams, id)
 				f.auxDeadlineSlice = f.auxDeadlineSlice[1:]
+			}
+		} else if f.config.TypePrio = "fcfs" {
+			if hasMoreData {
+				f.streamQueue = append([]protocol.StreamID{id}, f.streamQueue...)
+			} else {
+				delete(f.activeStreams, id)
 			}
 		} else{ // RR
 			if hasMoreData { // put the stream back in the queue (at the end)

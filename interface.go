@@ -332,7 +332,8 @@ type Config struct {
 	//SCHEDULER: Deadline defines the deadline given to each stream.
 	StreamDeadline *[]int64
 
-	//SCHEDULER: TypePrio defines the type of the priority scheduler--> abs: absolute priorities, rr: round robin, edf: earliest deadline first
+	//SCHEDULER: TypePrio defines the type of the priority scheduler--> abs: absolute priorities, rr: round robin (default), 
+	// edf: earliest deadline first, fcfs: first-come-first-serve
 	TypePrio string
 }
 
