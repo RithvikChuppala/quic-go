@@ -157,7 +157,7 @@ func main() {
 	logger.SetLogTimeFormat("")
 
 	if len(bs) == 0 {
-		bs = binds{"localhost:6121"}
+		bs = binds{"localhost:6060"}
 	}
 
 	handler := setupHandler(*www)
